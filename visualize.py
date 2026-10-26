@@ -57,13 +57,30 @@ def render(model, export, out, fps, preview_only=False):
         if component.getConcreteClassName() != 'Mesh':
             continue
         mesh = osim.Mesh.safeDownCast(component)
-        if mesh.get_mesh_file() == 'treadmill.vtp':
+        if mesh.get_mesh_file() in ['treadmill.vtp', 'hat_ribs.vtp']:
             continue
         vertices, faces = read_vtp(DATA/'Geometry'/mesh.get_mesh_file())
         vertices *= xyz(mesh.get_scale_factors())
         poly = Poly3DCollection([], edgecolor='none')
         ax.add_collection3d(poly)
         meshes.append((mesh.getFrame(), vertices, faces, poly))
+    from arm_visual import UpperBodyDisplay
+    torso_scale = None
+    for component in model.getComponentsList():
+        if component.getConcreteClassName() == 'Mesh':
+            mesh = osim.Mesh.safeDownCast(component)
+            if mesh.get_mesh_file() == 'hat_spine.vtp':
+                torso_scale = xyz(mesh.get_scale_factors())
+    if torso_scale is None:
+        raise ValueError('Torso geometry scale is missing')
+    upper_body = UpperBodyDisplay(DATA, torso_scale)
+    arms = []
+    for mesh in upper_body.mesh_components():
+        vertices, faces = read_vtp(DATA/'Geometry'/mesh.get_mesh_file())
+        vertices *= xyz(mesh.get_scale_factors())
+        poly = Poly3DCollection([], edgecolor='none')
+        ax.add_collection3d(poly)
+        arms.append((mesh.getFrame(), vertices, faces, poly))
     pv, pf = read_vtp(DATA/'Geometry/pat.vtp')
     patellas = {}
     for side in ['r', 'l']:
@@ -91,7 +108,7 @@ def render(model, export, out, fps, preview_only=False):
     stamp = fig.text(.60, .84, '', color='#a7b8ce', fontsize=12)
     fig.text(.05, .06, 'Ivory: bones    Gold: visual patellae    Red → orange: increasing muscle activation',
              color=text, fontsize=10)
-    fig.text(.05, .025, 'Recorded gait • muscle paths, not muscle volumes • patella placement illustrative • unvalidated load estimates',
+    fig.text(.05, .025, 'Recorded gait • muscle paths, not muscle volumes • arms and patellae illustrative • unvalidated load estimates',
              color='#91a3ba', fontsize=9)
     def update(t):
         state.setTime(float(t))
@@ -103,6 +120,12 @@ def render(model, export, out, fps, preview_only=False):
         for frame, vertices, faces, poly in meshes:
             rot, pos = transform(frame, state)
             world = (vertices @ rot.T + pos)[:, [0, 2, 1]]
+            poly.set_verts(world[faces]); poly.set_facecolor(shade(world, faces, '#e3e8eb'))
+        torso_rot, torso_pos = transform(model.getBodySet().get('torso'), state)
+        upper_body.set_pose(*(model.getCoordinateSet().get('hip_flexion_'+side).getValue(state)
+                              for side in ['r', 'l']))
+        for frame, vertices, faces, poly in arms:
+            world = upper_body.world_vertices(frame, vertices, torso_rot, torso_pos)[:, [0, 2, 1]]
             poly.set_verts(world[faces]); poly.set_facecolor(shade(world, faces, '#e3e8eb'))
         for side, poly in patellas.items():
             rot, _ = transform(model.getBodySet().get('femur_'+side), state)
@@ -136,13 +159,14 @@ def render(model, export, out, fps, preview_only=False):
 if __name__ == '__main__':
     import argparse
     import pandas as pd
-    from simulate import ROOT, DATA
+    from simulate import ROOT, DATA, fetch_assets
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, default=ROOT/'results')
     p.add_argument('--fps', type=int, default=20)
     p.add_argument('--preview-only', action='store_true')
     args = p.parse_args()
     if not 1 <= args.fps <= 60: p.error('fps must be between 1 and 60')
+    fetch_assets()
     osim.ModelVisualizer.addDirToGeometrySearchPaths(str(DATA/'Geometry'))
     render(osim.Model(str(args.output/'model.osim')),
            pd.read_csv(args.output/'knee_forces.csv'), args.output, args.fps, args.preview_only)

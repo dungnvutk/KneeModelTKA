@@ -1,9 +1,12 @@
-# KneeModelTKA — walking and knee reaction forces
+# KneeModelTKA — walking, hip and knee forces
 
-Python/OpenSim simulation of a skeletal walking model with muscle-force estimation and bilateral knee reaction plots. The first implementation uses the open Gait2392 **native-knee** model and the supplied subject01 walking trial; it does not yet contain a knee implant.
+Python/OpenSim walking simulation with shaded skeletal anatomy, muscle paths, and bilateral hip and knee force estimates. The animation includes connected shoulders, arms and hands, with illustrative arm swing and visual patellae. This uses the open Gait2392 **native-knee** model and subject01 walking trial; it does not yet contain a knee implant.
+
+![Walking simulation with shoulders, arms, hands and muscle paths](examples/walking.gif)
+
+*Recorded walking with estimated muscle activation and synchronized knee loads. Arm motion and patella placement are illustrative; load estimates are not clinically validated.*
 
 ![Knee force plots](examples/knee_forces.png)
-![Skeletal walking replay](examples/walking.gif)
 
 ## Run on Windows
 
@@ -97,3 +100,13 @@ After a complete simulation, re-render without recalculating forces:
 ```
 
 Animation uses recorded IK motion while activation/forces are from the filtered inverse analysis, as described above.
+
+## Arms in the walking display
+
+The upper-body visualization uses the matched Rajagopal OpenSense shoulder girdle, humeri, ulnae, radii and individual hand bones. OpenSim evaluates the source model's actual shoulder, elbow, radioulnar and wrist joint frames. The original mesh origins and scales are preserved: bones are no longer independently centered or fitted by bounding boxes. The source torso coordinate system is mapped onto the gait torso, with scale correction shared by the shoulder girdle and arms.
+
+The previous rib-only mesh is replaced visually with the source rib-and-scapula mesh. Shoulders have a modest 3° outward angle, elbows 18° flexion and forearms 70° pronation. Illustrative swing is -0.55 times same-side hip flexion, capped at ±0.30 radians.
+
+**This remains a display-only upper-body model.** It is evaluated separately and contributes no forces or inertia to the gait solver. Arm movement is not measured in this trial; no arm muscle activations are inferred. Hip/knee force calculations and the original head-arms-torso dynamics remain unchanged.
+
+Tests check that all eight upper-limb joint centers remain connected throughout sampled swing poses and that the torso mapping preserves attachment. Run the simulation once to download assets before running the integration tests.
