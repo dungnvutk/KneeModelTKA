@@ -82,3 +82,18 @@ Hip loads use the same muscle solution, reserves and external forces as the knee
 ### Inverse analysis approach
 
 This uses an existing OpenSim musculoskeletal model, not a skeleton constructed from scratch. Supplied inverse-kinematics coordinates prescribe the movement. With measured external loads, the equations of motion determine the generalized force requirements. Static optimization resolves those requirements into muscle and reserve forces by minimizing squared activations with muscle physiology. JointReaction then computes the forces transferred between bodies. The implementation does not rerun marker-based IK or a separate InverseDynamicsTool; the dynamic force requirements are evaluated within static optimization. It is an inverse-dynamics-based analysis, not a forward gait controller or a learned force predictor.
+
+## Anatomy display
+
+The walking view now renders all 92 existing OpenSim muscle paths, including moving path points, colored red to orange by the static-optimization activation. These are paths, not volumetric muscle anatomy. Bones have directional shading on a dark background, and the knee-force plot uses contrasting blue/orange curves.
+
+Bilateral gold patella meshes use the official OpenSim `Geometry/pat.vtp` asset, mirrored for the left side. **Patellae are visual additions only**, not new dynamic bodies: their centered mesh is placed 40 mm anterior and 15 mm proximal to the tibia origin using half the knee-flexion angle relative to the femur. This illustrative tracking rule is not patient-specific or a validated patellofemoral model. It adds no mass, forces, muscle attachments or contact mechanics. Existing muscle actuators and calculated hip/knee loads are unchanged. Explicit patellofemoral mechanics would require a separate model and validation.
+
+After a complete simulation, re-render without recalculating forces:
+
+```powershell
+.\.venv\Scripts\python.exe visualize.py
+.\.venv\Scripts\python.exe visualize.py --preview-only
+```
+
+Animation uses recorded IK motion while activation/forces are from the filtered inverse analysis, as described above.
