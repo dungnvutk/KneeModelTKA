@@ -1,0 +1,71 @@
+{
+  "model_mass_kg": 72.60000000000004,
+  "body_weight_N": 711.9627900000003,
+  "opensim_version": "4.6-2026-06-22-85aaf64",
+  "source_commit": "d9b05d470b1a481c222372c85b75772faf8f7792",
+  "analysis": "Prescribed walking + static optimization + joint reaction",
+  "frame": "Force on femur, expressed in ipsilateral femur frame",
+  "clinical_validation": false,
+  "peaks": {
+    "Right": {
+      "resultant_N": 2954.535795378161,
+      "resultant_BW": 4.149845802163565
+    },
+    "Left": {
+      "resultant_N": 2629.2566249096117,
+      "resultant_BW": 3.69296915771344
+    }
+  },
+  "peak_abs_reserves": {
+    "reserve_pelvis_tilt": 30.62758596,
+    "reserve_pelvis_list": 34.19291149,
+    "reserve_pelvis_rotation": 13.78889454,
+    "reserve_pelvis_tx": 35.88656199,
+    "reserve_pelvis_ty": 74.55175187,
+    "reserve_pelvis_tz": 58.11654941,
+    "reserve_hip_flexion_r": 2.78752719,
+    "reserve_hip_adduction_r": 2.23711601,
+    "reserve_hip_rotation_r": 1.0751381,
+    "reserve_knee_angle_r": 2.95869374,
+    "reserve_ankle_angle_r": 1.24333312,
+    "reserve_subtalar_angle_r": 1.64401647,
+    "reserve_mtp_angle_r": 0.68388263,
+    "reserve_hip_flexion_l": 3.19532943,
+    "reserve_hip_adduction_l": 5.05968452,
+    "reserve_hip_rotation_l": 1.82199497,
+    "reserve_knee_angle_l": 2.56373143,
+    "reserve_ankle_angle_l": 1.5453606,
+    "reserve_subtalar_angle_l": 1.54778914,
+    "reserve_mtp_angle_l": 0.64317263,
+    "reserve_lumbar_extension": 0.24995687,
+    "reserve_lumbar_bending": 0.20158606,
+    "reserve_lumbar_rotation": 0.32746755
+  },
+  "peak_pelvis_residual_force_BW": 0.11495043846306635,
+  "quality_flags": [
+    "Pelvis residual force exceeds 5% BW; improve dynamic consistency with RRA before research interpretation.",
+    "r: knee reserve exceeds 2 Nm; assess reserve sensitivity.",
+    "l: knee reserve exceeds 2 Nm; assess reserve sensitivity."
+  ],
+  "verification": [
+    "finite and monotonic outputs",
+    "matching SO/JR sample times",
+    "parent/child force balance",
+    "rotation-invariant force magnitude"
+  ],
+  "hip_peaks": {
+    "Right": {
+      "resultant_N": 2354.3440966643634,
+      "resultant_BW": 3.306835876442872
+    },
+    "Left": {
+      "resultant_N": 3109.2818977998495,
+      "resultant_BW": 4.367197192707007
+    }
+  },
+  "hip_verification": [
+    "matching hip/knee times",
+    "parent/child force balance",
+    "rotation-invariant force magnitude"
+  ]
+}
