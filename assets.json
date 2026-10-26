@@ -97,6 +97,10 @@
     {
       "path": "Pipelines/Gait2392_Simbody/subject01_walk1_ik.mot",
       "git_blob_sha1": "e0a5740045d6dd60b95e61095215b266dfa9daa0"
+    },
+    {
+      "path": "Geometry/pat.vtp",
+      "git_blob_sha1": "d09903817828303235aad9b9b9f0b2ce4a11d6a0"
     }
   ]
 }

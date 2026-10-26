@@ -9,3 +9,5 @@ Lower-extremity joints follow Delp et al. (1990); low-back joint/anthropometry f
 Walking motion, force-plate data and skeletal meshes are distributed with the official OpenSim examples. Preserve their upstream notices and consult upstream for asset-specific terms. Generated example renderings are derived from these assets and carry the same attribution.
 
 Changes made here: addition of coordinate reserve actuators, generated analysis settings, static optimization/joint reaction computation, and Python plots/animation. The original downloaded files are unmodified and hash-checked.
+
+The anatomy display additionally downloads OpenSim's `Geometry/pat.vtp` from the same pinned source. It is centered, mirrored for the left side, and positioned using an illustrative display-only rule. The original downloaded mesh remains unmodified. Muscle paths are evaluated from the existing Gait2392 model.

@@ -278,59 +278,8 @@ def read_vtp(path):
 
 
 def animate(model, export, out, fps):
-    motion = read_storage(PIPE / 'subject01_walk1_ik.mot')
-    # Input header explicitly specifies degrees; OpenSim coordinate values use radians.
-    state = model.initSystem()
-    times = np.linspace(export.time_s.iloc[0], export.time_s.iloc[-1],
-                        max(2, round((export.time_s.iloc[-1] - export.time_s.iloc[0]) * fps) + 1))
-    fig = plt.figure(figsize=(11, 6), layout='constrained')
-    ax = fig.add_subplot(121, projection='3d')
-    curves = fig.add_subplot(122)
-    meshes = []
-    for component in model.getComponentsList():
-        if component.getConcreteClassName() != 'Mesh':
-            continue
-        mesh = osim.Mesh.safeDownCast(component)
-        if mesh.get_mesh_file() == 'treadmill.vtp':
-            continue
-        vertices, faces = read_vtp(DATA / 'Geometry' / mesh.get_mesh_file())
-        scale = np.array([mesh.get_scale_factors().get(i) for i in range(3)])
-        poly = Poly3DCollection([], facecolor='#e7d7b4', edgecolor='none', alpha=1)
-        ax.add_collection3d(poly)
-        meshes.append((mesh.getFrame(), vertices * scale, faces, poly))
-    for side, name, color in [('r', 'Right', '#174ea6'), ('l', 'Left', '#c05b26')]:
-        curves.plot(export.time_s, export[f'{side}_resultant_BW'], label=name, color=color)
-    cursor = curves.axvline(times[0], color='black', alpha=.5)
-    curves.set(xlabel='Trial time (s)', ylabel='Knee resultant force (BW)', title='Force on femur')
-    curves.legend(); curves.grid(alpha=.2)
-    ax.view_init(elev=10, azim=-65)
-    ax.set(xlabel='Forward (m)', ylabel='Lateral (m)', zlabel='Height (m)')
-    ax.set_box_aspect((1.3, .7, 1.8))
-    title = fig.suptitle('')
-    def update(t):
-        state.setTime(float(t))
-        for coordinate in model.getCoordinateSet():
-            value = float(np.interp(t, motion.time, motion[coordinate.getName()]))
-            if coordinate.getMotionType() == osim.Coordinate.Rotational:
-                value = np.deg2rad(value)
-            coordinate.setValue(state, value, False)
-        model.realizePosition(state)
-        for frame, vertices, faces, poly in meshes:
-            tr = frame.getTransformInGround(state)
-            rot = np.array([[tr.R().get(i, j) for j in range(3)] for i in range(3)])
-            pos = np.array([tr.p().get(i) for i in range(3)])
-            world = vertices @ rot.T + pos
-            poly.set_verts(world[:, [0, 2, 1]][faces])
-        center = float(np.interp(t, motion.time, motion.pelvis_tx))
-        ax.set_xlim(center - .65, center + .65)
-        ax.set_ylim(-.4, .4); ax.set_zlim(0, 1.9)
-        cursor.set_xdata([t, t])
-        title.set_text(f'Gait2392 recorded walking replay | t = {t:.2f} s\nGeneric model estimate — not a TKA contact simulation')
-        return []
-    animation = FuncAnimation(fig, update, frames=times, interval=1000 / fps)
-    animation.save(out / 'walking.gif', writer=PillowWriter(fps=fps), dpi=95)
-    update(times[len(times)//2]);fig.savefig(out / 'walking_preview.png', dpi=140)
-    plt.close(fig)
+    from visualize import render
+    render(model, export, out, fps)
 
 
 def main():
