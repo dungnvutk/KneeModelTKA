@@ -1,9 +1,12 @@
-# KneeModelTKA — walking and knee reaction forces
+# KneeModelTKA — walking, hip and knee forces
 
-Python/OpenSim simulation of a skeletal walking model with muscle-force estimation and bilateral knee reaction plots. The first implementation uses the open Gait2392 **native-knee** model and the supplied subject01 walking trial; it does not yet contain a knee implant.
+Python/OpenSim walking simulation with shaded skeletal anatomy, muscle paths, and bilateral hip and knee force estimates. The animation includes connected shoulders, arms and hands, with illustrative arm swing and visual patellae. This uses the open Gait2392 **native-knee** model and subject01 walking trial; it does not yet contain a knee implant.
+
+![Walking simulation with shoulders, arms, hands and muscle paths](examples/walking.gif)
+
+*Recorded walking with estimated muscle activation and synchronized knee loads. Arm motion and patella placement are illustrative; load estimates are not clinically validated.*
 
 ![Knee force plots](examples/knee_forces.png)
-![Skeletal walking replay](examples/walking.gif)
 
 ## Run on Windows
 
