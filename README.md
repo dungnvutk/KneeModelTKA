@@ -100,6 +100,10 @@ Animation uses recorded IK motion while activation/forces are from the filtered 
 
 ## Arms in the walking display
 
-Both arms now include shaded humerus, radius, ulna and hand meshes from the same pinned OpenSim geometry collection. Shoulders follow the torso. Arm swing is set to -0.65 times the same-side hip flexion (capped at ±0.4 radians), with 8° outward shoulder spread and 25° elbow flexion. Display segment lengths are 0.29 m upper arm, 0.25 m forearm and 0.18 m hand; these are illustrative, not subject-specific measurements.
+The upper-body visualization uses the matched Rajagopal OpenSense shoulder girdle, humeri, ulnae, radii and individual hand bones. OpenSim evaluates the source model's actual shoulder, elbow, radioulnar and wrist joint frames. The original mesh origins and scales are preserved: bones are no longer independently centered or fitted by bounding boxes. The source torso coordinate system is mapped onto the gait torso, with scale correction shared by the shoulder girdle and arms.
 
-**Arms are visual only:** their motion is not measured in this trial and they add no dynamic bodies, muscle actuators or forces. Gait2392's existing head-arms-torso representation and hip/knee load calculations are unchanged. There are no estimated arm muscle activations. The visualization downloads the new assets automatically when rerendered.
+The previous rib-only mesh is replaced visually with the source rib-and-scapula mesh. Shoulders have a modest 3° outward angle, elbows 18° flexion and forearms 70° pronation. Illustrative swing is -0.55 times same-side hip flexion, capped at ±0.30 radians.
+
+**This remains a display-only upper-body model.** It is evaluated separately and contributes no forces or inertia to the gait solver. Arm movement is not measured in this trial; no arm muscle activations are inferred. Hip/knee force calculations and the original head-arms-torso dynamics remain unchanged.
+
+Tests check that all eight upper-limb joint centers remain connected throughout sampled swing poses and that the torso mapping preserves attachment. Run the simulation once to download assets before running the integration tests.

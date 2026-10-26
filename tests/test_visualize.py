@@ -19,16 +19,28 @@ class DisplayTests(unittest.TestCase):
         self.assertTrue(np.isfinite(colors).all())
         self.assertTrue(((colors >= 0) & (colors <= 1)).all())
 
+
 class ArmDisplayTests(unittest.TestCase):
-    def test_segment_lengths_and_opposite_swing(self):
-        from visualize import arm_pose
-        for side in ['r', 'l']:
-            for angle in [-.6, 0, .6]:
-                poses = arm_pose(np.eye(3), np.zeros(3), side, angle)
-                self.assertAlmostEqual(np.linalg.norm(poses[1][1]-poses[0][1]), .29)
-                self.assertAlmostEqual(np.linalg.norm(poses[2][1]-poses[1][1]), .25)
-                for rot, pos in poses:
-                    np.testing.assert_allclose(rot.T @ rot, np.eye(3), atol=1e-12)
-                    self.assertTrue(np.isfinite(pos).all())
-                if angle:
-                    self.assertLess(angle*(poses[1][1][0]-poses[0][1][0]), 0)
+    def test_joint_centers_stay_connected_through_swing(self):
+        from arm_visual import UpperBodyDisplay
+        from simulate import DATA
+        from visualize import xyz
+        upper = UpperBodyDisplay(DATA, [1., 1., 1.])
+        for angle in [-.6, 0., .6]:
+            upper.set_pose(angle, -angle)
+            for side in ['r', 'l']:
+                for prefix in ['acromial_', 'elbow_', 'radioulnar_', 'radius_hand_']:
+                    joint = upper.model.getJointSet().get(prefix+side)
+                    parent = xyz(joint.getParentFrame().getPositionInGround(upper.state))
+                    child = xyz(joint.getChildFrame().getPositionInGround(upper.state))
+                    np.testing.assert_allclose(parent, child, atol=1e-10)
+
+    def test_torso_mapping_preserves_attachment(self):
+        from arm_visual import UpperBodyDisplay
+        from simulate import DATA
+        upper = UpperBodyDisplay(DATA, [1., 1., 1.])
+        upper.set_pose(0., 0.)
+        torso = upper.model.getBodySet().get('torso')
+        position = np.array([1., 2., 3.])
+        actual = upper.world_vertices(torso, np.zeros((1,3)), np.eye(3), position)
+        np.testing.assert_allclose(actual[0], position, atol=1e-10)

@@ -39,31 +39,6 @@ def patella_vertices(vertices, side, knee_center, femur_rotation, knee_angle):
     center = knee_center + rotation @ np.array([.04, .015, 0])
     return local @ rotation.T + center
 
-def arm_pose(torso_rotation, torso_position, side, hip_angle):
-    """Display-only arm swing opposite the ipsilateral hip, in radians."""
-    sign = 1 if side == 'r' else -1
-    def rz(a):
-        c, s = np.cos(a), np.sin(a)
-        return np.array([[c,-s,0], [s,c,0], [0,0,1]])
-    a = -sign * np.deg2rad(8)
-    spread = np.array([[1,0,0], [0,np.cos(a),-np.sin(a)], [0,np.sin(a),np.cos(a)]])
-    swing = np.clip(-.65 * hip_angle, -.4, .4)
-    upper = torso_rotation @ spread @ rz(swing)
-    lower = upper @ rz(np.deg2rad(25))
-    shoulder = torso_position + torso_rotation @ np.array([.015, .38, sign*.18])
-    elbow = shoulder + upper @ np.array([0, -.29, 0])
-    wrist = elbow + lower @ np.array([0, -.25, 0])
-    return [(upper, shoulder), (lower, elbow), (lower, wrist)]
-
-def fit_arm_meshes(parts, length):
-    """Fit a group together, preserving the radius/ulna relationship."""
-    all_vertices = np.concatenate([v for v, _ in parts])
-    low, high = all_vertices.min(0), all_vertices.max(0)
-    origin = np.array([(low[0]+high[0])/2, high[1], (low[2]+high[2])/2])
-    scale = length / (high[1]-low[1])
-    return [((v-origin)*scale, f) for v, f in parts]
-
-
 def render(model, export, out, fps, preview_only=False):
     from simulate import read_storage, read_vtp, DATA, PIPE
     motion = read_storage(PIPE / 'subject01_walk1_ik.mot')
@@ -82,22 +57,30 @@ def render(model, export, out, fps, preview_only=False):
         if component.getConcreteClassName() != 'Mesh':
             continue
         mesh = osim.Mesh.safeDownCast(component)
-        if mesh.get_mesh_file() == 'treadmill.vtp':
+        if mesh.get_mesh_file() in ['treadmill.vtp', 'hat_ribs.vtp']:
             continue
         vertices, faces = read_vtp(DATA/'Geometry'/mesh.get_mesh_file())
         vertices *= xyz(mesh.get_scale_factors())
         poly = Poly3DCollection([], edgecolor='none')
         ax.add_collection3d(poly)
         meshes.append((mesh.getFrame(), vertices, faces, poly))
+    from arm_visual import UpperBodyDisplay
+    torso_scale = None
+    for component in model.getComponentsList():
+        if component.getConcreteClassName() == 'Mesh':
+            mesh = osim.Mesh.safeDownCast(component)
+            if mesh.get_mesh_file() == 'hat_spine.vtp':
+                torso_scale = xyz(mesh.get_scale_factors())
+    if torso_scale is None:
+        raise ValueError('Torso geometry scale is missing')
+    upper_body = UpperBodyDisplay(DATA, torso_scale)
     arms = []
-    for side in ['r', 'l']:
-        for group, (names, length) in enumerate([
-                (['humerus'], .29), (['radius', 'ulna'], .25), (['hand'], .18)]):
-            parts = [read_vtp(DATA/'Geometry'/f'{side}_{name}.vtp') for name in names]
-            for vertices, faces in fit_arm_meshes(parts, length):
-                poly = Poly3DCollection([], edgecolor='none')
-                ax.add_collection3d(poly)
-                arms.append((side, group, vertices, faces, poly))
+    for mesh in upper_body.mesh_components():
+        vertices, faces = read_vtp(DATA/'Geometry'/mesh.get_mesh_file())
+        vertices *= xyz(mesh.get_scale_factors())
+        poly = Poly3DCollection([], edgecolor='none')
+        ax.add_collection3d(poly)
+        arms.append((mesh.getFrame(), vertices, faces, poly))
     pv, pf = read_vtp(DATA/'Geometry/pat.vtp')
     patellas = {}
     for side in ['r', 'l']:
@@ -139,12 +122,10 @@ def render(model, export, out, fps, preview_only=False):
             world = (vertices @ rot.T + pos)[:, [0, 2, 1]]
             poly.set_verts(world[faces]); poly.set_facecolor(shade(world, faces, '#e3e8eb'))
         torso_rot, torso_pos = transform(model.getBodySet().get('torso'), state)
-        arm_poses = {side: arm_pose(torso_rot, torso_pos, side,
-                     model.getCoordinateSet().get('hip_flexion_'+side).getValue(state))
-                     for side in ['r', 'l']}
-        for side, group, vertices, faces, poly in arms:
-            rot, pos = arm_poses[side][group]
-            world = (vertices @ rot.T + pos)[:, [0, 2, 1]]
+        upper_body.set_pose(*(model.getCoordinateSet().get('hip_flexion_'+side).getValue(state)
+                              for side in ['r', 'l']))
+        for frame, vertices, faces, poly in arms:
+            world = upper_body.world_vertices(frame, vertices, torso_rot, torso_pos)[:, [0, 2, 1]]
             poly.set_verts(world[faces]); poly.set_facecolor(shade(world, faces, '#e3e8eb'))
         for side, poly in patellas.items():
             rot, _ = transform(model.getBodySet().get('femur_'+side), state)
