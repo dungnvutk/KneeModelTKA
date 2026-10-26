@@ -97,3 +97,9 @@ After a complete simulation, re-render without recalculating forces:
 ```
 
 Animation uses recorded IK motion while activation/forces are from the filtered inverse analysis, as described above.
+
+## Arms in the walking display
+
+Both arms now include shaded humerus, radius, ulna and hand meshes from the same pinned OpenSim geometry collection. Shoulders follow the torso. Arm swing is set to -0.65 times the same-side hip flexion (capped at ±0.4 radians), with 8° outward shoulder spread and 25° elbow flexion. Display segment lengths are 0.29 m upper arm, 0.25 m forearm and 0.18 m hand; these are illustrative, not subject-specific measurements.
+
+**Arms are visual only:** their motion is not measured in this trial and they add no dynamic bodies, muscle actuators or forces. Gait2392's existing head-arms-torso representation and hip/knee load calculations are unchanged. There are no estimated arm muscle activations. The visualization downloads the new assets automatically when rerendered.

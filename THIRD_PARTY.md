@@ -11,3 +11,5 @@ Walking motion, force-plate data and skeletal meshes are distributed with the of
 Changes made here: addition of coordinate reserve actuators, generated analysis settings, static optimization/joint reaction computation, and Python plots/animation. The original downloaded files are unmodified and hash-checked.
 
 The anatomy display additionally downloads OpenSim's `Geometry/pat.vtp` from the same pinned source. It is centered, mirrored for the left side, and positioned using an illustrative display-only rule. The original downloaded mesh remains unmodified. Muscle paths are evaluated from the existing Gait2392 model.
+
+Arm rendering uses the official left/right humerus, radius, ulna and hand VTP meshes. The original assets are hash-verified and unmodified on disk; the renderer fits them to illustrative segment lengths and applies a torso-relative gait-swing heuristic.

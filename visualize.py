@@ -39,6 +39,31 @@ def patella_vertices(vertices, side, knee_center, femur_rotation, knee_angle):
     center = knee_center + rotation @ np.array([.04, .015, 0])
     return local @ rotation.T + center
 
+def arm_pose(torso_rotation, torso_position, side, hip_angle):
+    """Display-only arm swing opposite the ipsilateral hip, in radians."""
+    sign = 1 if side == 'r' else -1
+    def rz(a):
+        c, s = np.cos(a), np.sin(a)
+        return np.array([[c,-s,0], [s,c,0], [0,0,1]])
+    a = -sign * np.deg2rad(8)
+    spread = np.array([[1,0,0], [0,np.cos(a),-np.sin(a)], [0,np.sin(a),np.cos(a)]])
+    swing = np.clip(-.65 * hip_angle, -.4, .4)
+    upper = torso_rotation @ spread @ rz(swing)
+    lower = upper @ rz(np.deg2rad(25))
+    shoulder = torso_position + torso_rotation @ np.array([.015, .38, sign*.18])
+    elbow = shoulder + upper @ np.array([0, -.29, 0])
+    wrist = elbow + lower @ np.array([0, -.25, 0])
+    return [(upper, shoulder), (lower, elbow), (lower, wrist)]
+
+def fit_arm_meshes(parts, length):
+    """Fit a group together, preserving the radius/ulna relationship."""
+    all_vertices = np.concatenate([v for v, _ in parts])
+    low, high = all_vertices.min(0), all_vertices.max(0)
+    origin = np.array([(low[0]+high[0])/2, high[1], (low[2]+high[2])/2])
+    scale = length / (high[1]-low[1])
+    return [((v-origin)*scale, f) for v, f in parts]
+
+
 def render(model, export, out, fps, preview_only=False):
     from simulate import read_storage, read_vtp, DATA, PIPE
     motion = read_storage(PIPE / 'subject01_walk1_ik.mot')
@@ -64,6 +89,15 @@ def render(model, export, out, fps, preview_only=False):
         poly = Poly3DCollection([], edgecolor='none')
         ax.add_collection3d(poly)
         meshes.append((mesh.getFrame(), vertices, faces, poly))
+    arms = []
+    for side in ['r', 'l']:
+        for group, (names, length) in enumerate([
+                (['humerus'], .29), (['radius', 'ulna'], .25), (['hand'], .18)]):
+            parts = [read_vtp(DATA/'Geometry'/f'{side}_{name}.vtp') for name in names]
+            for vertices, faces in fit_arm_meshes(parts, length):
+                poly = Poly3DCollection([], edgecolor='none')
+                ax.add_collection3d(poly)
+                arms.append((side, group, vertices, faces, poly))
     pv, pf = read_vtp(DATA/'Geometry/pat.vtp')
     patellas = {}
     for side in ['r', 'l']:
@@ -91,7 +125,7 @@ def render(model, export, out, fps, preview_only=False):
     stamp = fig.text(.60, .84, '', color='#a7b8ce', fontsize=12)
     fig.text(.05, .06, 'Ivory: bones    Gold: visual patellae    Red → orange: increasing muscle activation',
              color=text, fontsize=10)
-    fig.text(.05, .025, 'Recorded gait • muscle paths, not muscle volumes • patella placement illustrative • unvalidated load estimates',
+    fig.text(.05, .025, 'Recorded gait • muscle paths, not muscle volumes • arms and patellae illustrative • unvalidated load estimates',
              color='#91a3ba', fontsize=9)
     def update(t):
         state.setTime(float(t))
@@ -102,6 +136,14 @@ def render(model, export, out, fps, preview_only=False):
         model.realizePosition(state)
         for frame, vertices, faces, poly in meshes:
             rot, pos = transform(frame, state)
+            world = (vertices @ rot.T + pos)[:, [0, 2, 1]]
+            poly.set_verts(world[faces]); poly.set_facecolor(shade(world, faces, '#e3e8eb'))
+        torso_rot, torso_pos = transform(model.getBodySet().get('torso'), state)
+        arm_poses = {side: arm_pose(torso_rot, torso_pos, side,
+                     model.getCoordinateSet().get('hip_flexion_'+side).getValue(state))
+                     for side in ['r', 'l']}
+        for side, group, vertices, faces, poly in arms:
+            rot, pos = arm_poses[side][group]
             world = (vertices @ rot.T + pos)[:, [0, 2, 1]]
             poly.set_verts(world[faces]); poly.set_facecolor(shade(world, faces, '#e3e8eb'))
         for side, poly in patellas.items():
@@ -136,13 +178,14 @@ def render(model, export, out, fps, preview_only=False):
 if __name__ == '__main__':
     import argparse
     import pandas as pd
-    from simulate import ROOT, DATA
+    from simulate import ROOT, DATA, fetch_assets
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', type=Path, default=ROOT/'results')
     p.add_argument('--fps', type=int, default=20)
     p.add_argument('--preview-only', action='store_true')
     args = p.parse_args()
     if not 1 <= args.fps <= 60: p.error('fps must be between 1 and 60')
+    fetch_assets()
     osim.ModelVisualizer.addDirToGeometrySearchPaths(str(DATA/'Geometry'))
     render(osim.Model(str(args.output/'model.osim')),
            pd.read_csv(args.output/'knee_forces.csv'), args.output, args.fps, args.preview_only)

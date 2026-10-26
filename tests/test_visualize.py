@@ -18,3 +18,17 @@ class DisplayTests(unittest.TestCase):
         colors = shade(np.zeros((3, 3)), np.array([[0, 1, 2]]), '#ffffff')
         self.assertTrue(np.isfinite(colors).all())
         self.assertTrue(((colors >= 0) & (colors <= 1)).all())
+
+class ArmDisplayTests(unittest.TestCase):
+    def test_segment_lengths_and_opposite_swing(self):
+        from visualize import arm_pose
+        for side in ['r', 'l']:
+            for angle in [-.6, 0, .6]:
+                poses = arm_pose(np.eye(3), np.zeros(3), side, angle)
+                self.assertAlmostEqual(np.linalg.norm(poses[1][1]-poses[0][1]), .29)
+                self.assertAlmostEqual(np.linalg.norm(poses[2][1]-poses[1][1]), .25)
+                for rot, pos in poses:
+                    np.testing.assert_allclose(rot.T @ rot, np.eye(3), atol=1e-12)
+                    self.assertTrue(np.isfinite(pos).all())
+                if angle:
+                    self.assertLess(angle*(poses[1][1][0]-poses[0][1][0]), 0)
