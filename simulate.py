@@ -130,6 +130,16 @@ def analyze(model, out, start, end):
         reaction.setInFrame(strings([frame]))
         reaction.setForcesFileName(str(out / 'actuator_forces.sto'))
         tool.updAnalysisSet().cloneAndAppend(reaction)
+    for name, body, frame in [('HipReaction', 'child', 'child'),
+                              ('HipParentGround', 'parent', 'ground'),
+                              ('HipChildGround', 'child', 'ground')]:
+        reaction = osim.JointReaction()
+        reaction.setName(name)
+        reaction.setJointNames(strings(['hip_r', 'hip_l']))
+        reaction.setOnBody(strings([body]))
+        reaction.setInFrame(strings([frame]))
+        reaction.setForcesFileName(str(out / 'actuator_forces.sto'))
+        tool.updAnalysisSet().cloneAndAppend(reaction)
     tool.printToXML(str(out / 'joint_reaction.xml'))
     if not osim.AnalyzeTool(str(out / 'joint_reaction.xml')).run():
         raise RuntimeError('Joint reaction analysis failed')
@@ -199,6 +209,52 @@ def force_report(model, forces, out, manifest):
                                'parent/child force balance', 'rotation-invariant force magnitude']
     (out / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
     return export, summary
+
+
+def hip_report(out, summary):
+    """Report hip reactions on the femur, in its local frame, in N and BW."""
+    df = read_storage(out / 'walking_HipReaction_ReactionLoads.sto')
+    parent = read_storage(out / 'walking_HipParentGround_ReactionLoads.sto')
+    child = read_storage(out / 'walking_HipChildGround_ReactionLoads.sto')
+    knee = read_storage(out / 'walking_KneeReaction_ReactionLoads.sto')
+    for other in [parent, child, knee]:
+        if len(df) != len(other) or not np.allclose(df.time, other.time):
+            raise ValueError('Hip reaction sample times do not match')
+    export = pd.DataFrame({'time_s': df.time})
+    fig, axes = plt.subplots(2, 2, figsize=(12, 7), sharex=True, constrained_layout=True)
+    summary['hip_peaks'] = {}
+    for row, side in enumerate(['r', 'l']):
+        xyz = df[[f'hip_{side}_on_femur_{side}_in_femur_{side}_f{a}' for a in 'xyz']].to_numpy()
+        pg = parent[[f'hip_{side}_on_pelvis_in_ground_f{a}' for a in 'xyz']].to_numpy()
+        cg = child[[f'hip_{side}_on_femur_{side}_in_ground_f{a}' for a in 'xyz']].to_numpy()
+        resultant = np.linalg.norm(xyz, axis=1)
+        if not np.allclose(pg, -cg, atol=1e-5):
+            raise ValueError('Hip parent/child action-reaction check failed')
+        if not np.allclose(resultant, np.linalg.norm(cg, axis=1), atol=1e-5):
+            raise ValueError('Hip frame-rotation norm invariance failed')
+        for k, a in enumerate('xyz'):
+            export[f'{side}_F{a}_N'] = xyz[:, k]
+            axes[row, 0].plot(df.time, xyz[:, k], label=f'F{a}')
+        export[f'{side}_resultant_N'] = resultant
+        export[f'{side}_resultant_BW'] = resultant / summary['body_weight_N']
+        axes[row, 1].plot(df.time, export[f'{side}_resultant_BW'], color='#174ea6', lw=2)
+        name = 'Right' if side == 'r' else 'Left'
+        axes[row, 0].set_title(f'{name} hip — force on femur')
+        axes[row, 1].set_title(f'{name} hip — resultant')
+        axes[row, 0].set_ylabel('Force (N)')
+        axes[row, 1].set_ylabel('Body weights')
+        axes[row, 0].legend(ncol=3)
+        summary['hip_peaks'][name] = {'resultant_N': float(resultant.max()),
+                                    'resultant_BW': float(export[f'{side}_resultant_BW'].max())}
+    for ax in axes.flat:
+        ax.grid(alpha=.2); ax.set_xlabel('Trial time (s)')
+    fig.suptitle('Gait2392 walking | hip joint reactions — generic model estimates')
+    fig.savefig(out / 'hip_forces.png', dpi=180); plt.close(fig)
+    export.to_csv(out / 'hip_forces.csv', index=False)
+    summary['hip_verification'] = ['matching hip/knee times', 'parent/child force balance',
+                                   'rotation-invariant force magnitude']
+    (out / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+    return export
 
 
 def read_vtp(path):
@@ -295,6 +351,7 @@ def main():
     model = prepare_model(out)
     forces = analyze(model, out, args.start, args.end)
     export, summary = force_report(model, forces, out, manifest)
+    hip_report(out, summary)
     if not args.no_animation:
         animate(model, export, out, args.fps)
     print(json.dumps(summary, indent=2))

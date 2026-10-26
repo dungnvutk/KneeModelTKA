@@ -70,3 +70,15 @@ The program rejects nonfinite tables, nonmonotonic times and solver convergence 
 - [Gait2392 model documentation](https://opensimconfluence.atlassian.net/wiki/spaces/OpenSim/pages/53086215/Gait+2392+and+2354+Models).
 - [JointReaction documentation](https://opensimconfluence.atlassian.net/wiki/spaces/OpenSim/pages/53089600).
 - See [THIRD_PARTY.md](THIRD_PARTY.md) for model and geometry credits/license notices.
+
+## Hip force exports
+
+The same run also produces `hip_forces.csv` and `hip_forces.png`, plus `hip_peaks` and `hip_verification` in `summary.json`. Both hip and knee outputs describe **forces acting on the femur**, expressed in the ipsilateral femur frame. At the hip the femur is the child body; at the knee it is the parent body. Consequently the hip local Fy sign must not be interpreted with the knee compression convention. Use the signed components and nonnegative resultant as labeled.
+
+Hip loads use the same muscle solution, reserves and external forces as the knees. The program checks hip parent/child force balance, frame-rotation invariance and matching hip/knee times. The residual quality flags apply to both joints.
+
+![Hip reaction forces](examples/hip_forces.png)
+
+### Inverse analysis approach
+
+This uses an existing OpenSim musculoskeletal model, not a skeleton constructed from scratch. Supplied inverse-kinematics coordinates prescribe the movement. With measured external loads, the equations of motion determine the generalized force requirements. Static optimization resolves those requirements into muscle and reserve forces by minimizing squared activations with muscle physiology. JointReaction then computes the forces transferred between bodies. The implementation does not rerun marker-based IK or a separate InverseDynamicsTool; the dynamic force requirements are evaluated within static optimization. It is an inverse-dynamics-based analysis, not a forward gait controller or a learned force predictor.

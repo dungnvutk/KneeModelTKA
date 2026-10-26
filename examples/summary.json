@@ -52,5 +52,20 @@
     "matching SO/JR sample times",
     "parent/child force balance",
     "rotation-invariant force magnitude"
+  ],
+  "hip_peaks": {
+    "Right": {
+      "resultant_N": 2354.3440966643634,
+      "resultant_BW": 3.306835876442872
+    },
+    "Left": {
+      "resultant_N": 3109.2818977998495,
+      "resultant_BW": 4.367197192707007
+    }
+  },
+  "hip_verification": [
+    "matching hip/knee times",
+    "parent/child force balance",
+    "rotation-invariant force magnitude"
   ]
 }
